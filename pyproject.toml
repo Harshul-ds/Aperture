@@ -1,0 +1,53 @@
+[project]
+# --- Core Project Metadata ---
+name = "aperture_backend"
+version = "0.1.0"
+description = "The backend service for the Aperture personal oracle application."
+requires-python = ">=3.12" # Matches our modern Codespaces environment
+
+# --- Production Dependencies ---
+# These are the packages required for the application to RUN.
+# `uv sync` will install these by default.
+dependencies = [
+    # Core web framework
+    "fastapi",
+    "uvicorn[standard]", # The server that runs FastAPI
+    "python-dotenv",     # For managing environment variables
+    "pydantic-settings", # For type-safe settings management
+
+    # Google API and Authentication
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+
+    # Database and AI/NLP libraries
+    "sqlalchemy",      # For our relational metadata store (SQLite)
+    "chromadb",        # The vector database for semantic search
+    "spacy>=3.8.0,<3.9.0",
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",           # For NLP tasks like Named Entity Recognition
+    "sentence-transformers" # For creating vector embeddings
+
+]
+
+
+# --- Development Dependencies ---
+# These packages are for development ONLY (testing, linting, formatting).
+# They are not included in the final application.
+# Install them with `uv sync --all-extras`.
+[project.optional-dependencies]
+dev = [
+    "ruff",         # The all-in-one linter and formatter
+    "pytest",       # The gold standard for testing in Python
+    "pytest-watch"  # Automatically re-runs tests when you save a file
+]
+
+# --- Tool-Specific Configuration ---
+# This section helps configure the tools we use.
+[tool.ruff]
+# Standard configuration for the ruff linter
+line-length = 88
+select = ["E", "F", "W", "I"] # Select common error/warning codes
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"

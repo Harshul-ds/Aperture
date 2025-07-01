@@ -1,0 +1,12 @@
+{
+  "name": "aperture",
+  "version": "1.0.0",
+  "description": "Local application which serves as a smart abstraction over gmail",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log
+.npm/
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets
+backend/client_secret.json
+backend/token.json

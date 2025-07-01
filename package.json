@@ -1,12 +1,25 @@
 {
   "name": "aperture",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Local application which serves as a smart abstraction over gmail",
   "main": "main.js",
   "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "build": {
+    "appId": "com.yourname.aperture",
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
 }

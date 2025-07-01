@@ -8,8 +8,10 @@ let pyProcess = null;
 
 // --- Function to Start the FastAPI Backend ---
 function startPythonBackend() {
-    const script = path.join(__dirname, 'backend', 'main.py');
-    pyProcess = spawn('python', [script]);
+    // Run the backend as a module to ensure correct pathing
+    pyProcess = spawn('python3', ['-m', 'backend.main'], {
+        cwd: __dirname, // Set the working directory to the project root
+    });
 
     pyProcess.stdout.on('data', (data) => {
         console.log(`Python stdout: ${data}`);

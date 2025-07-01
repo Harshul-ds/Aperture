@@ -53,8 +53,8 @@ class IndexingService:
         text_to_vectorize = f"Subject: {subject}\n\n{email_data['snippet']}"
         embedding = self.vector_model.encode(text_to_vectorize).tolist()
 
-        # 5a. Classify the email
-        category = classification_service.classify_email(subject, decoded_body)
+        # 5a. Classify the email and extract job details
+        classification_results = classification_service.classify_email(subject, decoded_body)
 
         # 5. Store Email and Attachments in SQLite
         db_email = models.Email(
@@ -63,7 +63,9 @@ class IndexingService:
             sender=sender,
             subject=subject,
             snippet=email_data['snippet'],
-            category=category
+            category=classification_results['category'],
+            job_company=classification_results['company'],
+            job_status=classification_results['status']
         )
 
         # 6. Check for and store attachments

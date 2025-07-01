@@ -1,0 +1,166 @@
+/* frontend/css/style.css */
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f6f8fa;
+    color: #24292e;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e1e4e8;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+nav button {
+    font-size: 14px;
+    padding: 8px 16px;
+    border: 1px solid #d1d5da;
+    border-radius: 6px;
+    background-color: #f6f8fa;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+nav button:hover {
+    background-color: #f3f4f6;
+}
+
+nav button.active {
+    background-color: #0366d6;
+    color: white;
+    border-color: #0366d6;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.search-container {
+    margin-bottom: 20px;
+}
+
+#search-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid #d1d5da;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+#results-container .result-item {
+    border: 1px solid #e1e4e8;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.result-sender {
+    font-weight: bold;
+}
+
+.result-relevance {
+    font-size: 12px;
+    color: #586069;
+    background-color: #f1f8ff;
+    padding: 3px 6px;
+    border-radius: 20px;
+}
+
+.result-subject {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.result-preview {
+    font-size: 14px;
+    color: #586069;
+}
+
+.category-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    color: white;
+    margin-left: 10px;
+}
+
+.category-job-application { background-color: #0366d6; }
+.category-receipt { background-color: #28a745; }
+.category-newsletter { background-color: #6f42c1; }
+.category-general { background-color: #586069; }
+
+.hidden {
+    display: none;
+}
+
+/* Job Tracker Styles */
+#job-tracker-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.job-status-column {
+    background-color: #f6f8fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.job-status-column h2 {
+    font-size: 16px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.job-card {
+    background-color: #fff;
+    border-radius: 6px;
+    border: 1px solid #e1e4e8;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.job-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.job-card-company {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.job-card-subject {
+    font-size: 14px;
+    color: #586069;
+}

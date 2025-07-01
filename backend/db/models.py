@@ -15,6 +15,10 @@ class Email(Base):
     snippet = Column(Text)
     category = Column(String, default="General", index=True)
 
+    # Fields for the job tracking feature
+    job_company = Column(String, nullable=True, index=True)
+    job_status = Column(String, nullable=True, index=True)
+
     # This creates the one-to-many relationship
     attachments = relationship("Attachment", back_populates="email")
 

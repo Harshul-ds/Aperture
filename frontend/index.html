@@ -4,18 +4,33 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>Aperture</title>
-    <link rel="stylesheet" href="./assets/style.css">
+    <link rel="stylesheet" href="css/style.css">
+
 </head>
 <body>
     <div class="container">
-        <h1>Aperture</h1>
-        <p>Your personal oracle for your digital life.</p>
+        <header>
+            <h1>Aperture</h1>
+            <nav>
+                <button id="nav-search" class="active">Search</button>
+                <button id="nav-jobs">Job Tracker</button>
+            </nav>
+        </header>
 
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="Search your emails...">
+        <!-- Page for the main search functionality -->
+        <div id="search-page-container">
+            <p>Your personal oracle for your digital life.</p>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search your emails...">
+            </div>
+            <div id="results-container"></div>
         </div>
 
-        <div id="results-container"></div>
+        <!-- Page for the job application tracker -->
+        <div id="job-tracker-container" class="hidden">
+            <!-- The job board will be rendered here by renderer.js -->
+        </div>
+
     </div>
 
     <script src="./js/renderer.js"></script>

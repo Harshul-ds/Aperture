@@ -1,107 +1,152 @@
-// frontend/js/renderer.js
-
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
     const searchInput = document.getElementById('search-input');
     const resultsContainer = document.getElementById('results-container');
-    const API_BASE_URL = 'http://127.0.0.1:8000'; // Default FastAPI server address
+    const navSearch = document.getElementById('nav-search');
+    const navJobs = document.getElementById('nav-jobs');
+    const searchPageContainer = document.getElementById('search-page-container');
+    const jobTrackerContainer = document.getElementById('job-tracker-container');
 
-    // --- Function to perform the search ---
-    async function performSearch(query) {
-        if (!query) {
-            resultsContainer.innerHTML = ''; // Clear results if query is empty
-            return;
-        }
+    // --- State ---
+    let searchTimeout;
 
-        // Display a loading message
-        resultsContainer.innerHTML = '<p>Searching...</p>';
+    // --- Page Navigation ---
+    function switchToSearchView() {
+        searchPageContainer.classList.remove('hidden');
+        jobTrackerContainer.classList.add('hidden');
+        navSearch.classList.add('active');
+        navJobs.classList.remove('active');
+    }
 
-        try {
-            // Construct the full URL with the URL-encoded query parameter
-            const url = new URL(`${API_BASE_URL}/search/`);
-            url.searchParams.append('q', query);
+    async function switchToJobsView() {
+        searchPageContainer.classList.add('hidden');
+        jobTrackerContainer.classList.remove('hidden');
+        navSearch.classList.remove('active');
+        navJobs.classList.add('active');
+        await fetchAndRenderJobs();
+    }
 
-            const response = await fetch(url);
+    // --- Search Functionality ---
+    function handleSearch() {
+        clearTimeout(searchTimeout);
+        const query = searchInput.value;
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            displayResults(data);
-
-        } catch (error) {
-            console.error('Fetch error:', error);
-            resultsContainer.innerHTML = `<p class="error">Failed to fetch search results. Is the backend running?</p>`;
+        if (query.length > 2) {
+            searchTimeout = setTimeout(() => {
+                fetch(`http://127.0.0.1:8000/search/?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => renderSearchResults(data))
+                    .catch(error => {
+                        console.error('Error fetching search results:', error);
+                        resultsContainer.innerHTML = '<p>Error loading results.</p>';
+                    });
+            }, 300);
+        } else {
+            resultsContainer.innerHTML = '';
         }
     }
 
-    // --- Function to display the results in the DOM ---
-    function displayResults(data) {
-        // Clear previous results or loading message
+    function renderSearchResults(data) {
         resultsContainer.innerHTML = '';
+        if (data.results && data.results.length > 0) {
+            data.results.forEach(item => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
 
-        if (data.status === 'error' || !data.results || data.results.length === 0) {
+                const header = document.createElement('div');
+                header.className = 'result-header';
+
+                const sender = document.createElement('div');
+                sender.className = 'result-sender';
+                sender.textContent = item.sender;
+
+                const categoryTag = document.createElement('span');
+                categoryTag.className = `category-tag category-${item.category.toLowerCase().replace(/\s+/g, '-')}`;
+                categoryTag.textContent = item.category;
+
+                const relevance = document.createElement('div');
+                relevance.className = 'result-relevance';
+                relevance.textContent = `Relevance: ${item.relevance_score}`;
+
+                header.appendChild(sender);
+                header.appendChild(categoryTag);
+                header.appendChild(relevance);
+
+                const subject = document.createElement('div');
+                subject.className = 'result-subject';
+                subject.textContent = item.has_attachment ? `${item.subject} 📎` : item.subject;
+
+                const preview = document.createElement('div');
+                preview.className = 'result-preview';
+                preview.textContent = item.preview;
+
+                resultItem.appendChild(header);
+                resultItem.appendChild(subject);
+                resultItem.appendChild(preview);
+                resultsContainer.appendChild(resultItem);
+            });
+        } else {
             resultsContainer.innerHTML = '<p>No results found.</p>';
-            return;
         }
-
-        const resultList = document.createElement('ul');
-        resultList.className = 'results-list';
-
-        data.results.forEach(item => {
-            const listItem = document.createElement('li');
-            listItem.className = 'result-item';
-
-            // Sanitize content before inserting to prevent XSS
-            const sender = document.createElement('span');
-            sender.className = 'sender';
-            sender.textContent = item.sender;
-
-            const relevance = document.createElement('span');
-            relevance.className = 'relevance';
-            relevance.textContent = `Relevance: ${item.relevance_score}`;
-
-            const header = document.createElement('div');
-            header.className = 'result-header';
-            header.appendChild(sender);
-                        const categoryTag = document.createElement('span');
-            // Add a class for general styling and a specific one for the category for potential color-coding
-            categoryTag.className = `category-tag category-${item.category.toLowerCase().replace(/\s+/g, '-')}`;
-            categoryTag.textContent = item.category;
-            header.appendChild(categoryTag);
-
-            header.appendChild(relevance);
-
-            const subject = document.createElement('div');
-            subject.className = 'result-subject';
-            subject.textContent = item.subject;
-
-            if (item.has_attachment) {
-                const attachmentIcon = document.createElement('span');
-                attachmentIcon.className = 'attachment-icon';
-                attachmentIcon.textContent = ' 📎';
-                subject.appendChild(attachmentIcon);
-            }
-
-            const preview = document.createElement('div');
-            preview.className = 'result-preview';
-            preview.textContent = item.preview;
-
-            listItem.appendChild(header);
-            listItem.appendChild(subject);
-            listItem.appendChild(preview);
-            
-            resultList.appendChild(listItem);
-        });
-
-        resultsContainer.appendChild(resultList);
     }
 
-    // --- Add event listener to the search input ---
-    searchInput.addEventListener('keyup', (event) => {
-        // Trigger search on "Enter" key
-        if (event.key === 'Enter') {
-            performSearch(searchInput.value.trim());
+    // --- Job Tracker Functionality ---
+    async function fetchAndRenderJobs() {
+        try {
+            jobTrackerContainer.innerHTML = '<p>Loading job applications...</p>';
+            const response = await fetch('http://127.0.0.1:8000/jobs/');
+            const data = await response.json();
+            if (data.status === 'success') {
+                renderJobBoard(data.results);
+            } else {
+                jobTrackerContainer.innerHTML = '<p>Could not load job applications.</p>';
+            }
+        } catch (error) {
+            console.error('Error fetching job applications:', error);
+            jobTrackerContainer.innerHTML = '<p>Error loading job applications.</p>';
         }
-    });
+    }
+
+    function renderJobBoard(jobs) {
+        jobTrackerContainer.innerHTML = '';
+
+        const statuses = ['Applied', 'Interview', 'Offer', 'Rejected'];
+        const jobsByStatus = statuses.reduce((acc, status) => {
+            acc[status] = jobs.filter(job => job.status === status);
+            return acc;
+        }, {});
+
+        statuses.forEach(status => {
+            const column = document.createElement('div');
+            column.className = 'job-status-column';
+
+            const title = document.createElement('h2');
+            title.textContent = `${status} (${jobsByStatus[status].length})`;
+            column.appendChild(title);
+
+            jobsByStatus[status].forEach(job => {
+                const card = document.createElement('div');
+                card.className = 'job-card';
+
+                const company = document.createElement('div');
+                company.className = 'job-card-company';
+                company.textContent = job.company || 'Unknown Company';
+
+                const subject = document.createElement('div');
+                subject.className = 'job-card-subject';
+                subject.textContent = job.subject;
+
+                card.appendChild(company);
+                card.appendChild(subject);
+                column.appendChild(card);
+            });
+
+            jobTrackerContainer.appendChild(column);
+        });
+    }
+
+    // --- Event Listeners ---
+    searchInput.addEventListener('input', handleSearch);
+    navSearch.addEventListener('click', switchToSearchView);
+    navJobs.addEventListener('click', switchToJobsView);
 });

@@ -5,6 +5,7 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 from backend.db.database import SessionLocal
 from backend.db import models
+from backend.core.classification_service import classification_service
 
 class IndexingService:
     def __init__(self):
@@ -52,13 +53,17 @@ class IndexingService:
         text_to_vectorize = f"Subject: {subject}\n\n{email_data['snippet']}"
         embedding = self.vector_model.encode(text_to_vectorize).tolist()
 
+        # 5a. Classify the email
+        category = classification_service.classify_email(subject, decoded_body)
+
         # 5. Store Email and Attachments in SQLite
         db_email = models.Email(
             id=email_data['id'],
             thread_id=email_data['threadId'],
             sender=sender,
             subject=subject,
-            snippet=email_data['snippet']
+            snippet=email_data['snippet'],
+            category=category
         )
 
         # 6. Check for and store attachments

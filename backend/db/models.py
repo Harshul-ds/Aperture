@@ -13,6 +13,7 @@ class Email(Base):
     sender = Column(String)
     subject = Column(String)
     snippet = Column(Text)
+    category = Column(String, default="General", index=True)
 
     # This creates the one-to-many relationship
     attachments = relationship("Attachment", back_populates="email")

@@ -64,6 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const header = document.createElement('div');
             header.className = 'result-header';
             header.appendChild(sender);
+                        const categoryTag = document.createElement('span');
+            // Add a class for general styling and a specific one for the category for potential color-coding
+            categoryTag.className = `category-tag category-${item.category.toLowerCase().replace(/\s+/g, '-')}`;
+            categoryTag.textContent = item.category;
+            header.appendChild(categoryTag);
+
             header.appendChild(relevance);
 
             const subject = document.createElement('div');

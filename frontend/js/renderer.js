@@ -70,6 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
             subject.className = 'result-subject';
             subject.textContent = item.subject;
 
+            if (item.has_attachment) {
+                const attachmentIcon = document.createElement('span');
+                attachmentIcon.className = 'attachment-icon';
+                attachmentIcon.textContent = ' 📎';
+                subject.appendChild(attachmentIcon);
+            }
+
             const preview = document.createElement('div');
             preview.className = 'result-preview';
             preview.textContent = item.preview;

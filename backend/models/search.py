@@ -9,6 +9,7 @@ class SearchResultItem(BaseModel):
     subject: str
     preview: str
     relevance_score: float
+    has_attachment: bool
 
 class SearchResponse(BaseModel):
     """Defines the structure of the entire search API response."""

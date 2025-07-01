@@ -72,7 +72,8 @@ class SearchService:
                         sender=email_details.sender,
                         subject=email_details.subject,
                         preview=email_details.snippet, # Use the snippet from SQLite
-                        relevance_score=round(relevance_score, 2)
+                        relevance_score=round(relevance_score, 2),
+                        has_attachment=True if email_details.attachments else False
                     )
                 )
 

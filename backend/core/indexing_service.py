@@ -23,35 +23,36 @@ class IndexingService:
 
     def process_and_index_email(self, email_data: dict):
         """
-        Takes raw email data, processes it, and stores the results.
+        Takes raw email data, processes it, and stores the results, including attachments.
         """
-        # 1. Decode the email body (it comes from Google in base64)
-        if 'parts' in email_data['payload']:
-            part = email_data['payload']['parts'][0]
-            if 'data' in part['body']:
-                body_data = part['body']['data']
-                decoded_body = base64.urlsafe_b64decode(body_data).decode('utf-8')
-            else:
-                decoded_body = "" # Handle emails with no body
-        else:
-            decoded_body = ""
+        # Check if email is already indexed
+        if self.db.query(models.Email).filter(models.Email.id == email_data['id']).first():
+            print(f"Skipping already indexed email: {email_data['id']}")
+            return
 
+        # 1. Decode the email body
+        decoded_body = ""
+        if 'parts' in email_data['payload']:
+            for part in email_data['payload']['parts']:
+                if part.get('mimeType') == 'text/plain' and 'data' in part['body']:
+                    body_data = part['body']['data']
+                    decoded_body = base64.urlsafe_b64decode(body_data).decode('utf-8', 'ignore')
+                    break # Stop after finding the first plain text part
+        
         # 2. Extract Metadata
         headers = email_data['payload']['headers']
         subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), 'No Subject')
         sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), 'No Sender')
 
         # 3. Perform NLP Analysis
-        doc = self.nlp(decoded_body[:100000]) # Process first 100k chars
+        doc = self.nlp(decoded_body[:100000])
         entities = [(ent.text, ent.label_) for ent in doc.ents]
         
         # 4. Create Vector Embedding
-        # We'll vectorize the most important parts: subject and a snippet of the body
         text_to_vectorize = f"Subject: {subject}\n\n{email_data['snippet']}"
         embedding = self.vector_model.encode(text_to_vectorize).tolist()
 
-        # 5. Store the results
-        # Store metadata in SQLite
+        # 5. Store Email and Attachments in SQLite
         db_email = models.Email(
             id=email_data['id'],
             thread_id=email_data['threadId'],
@@ -59,19 +60,32 @@ class IndexingService:
             subject=subject,
             snippet=email_data['snippet']
         )
+
+        # 6. Check for and store attachments
+        if 'parts' in email_data['payload']:
+            for part in email_data['payload']['parts']:
+                if part.get('filename'):
+                    new_attachment = models.Attachment(
+                        filename=part['filename'],
+                        mime_type=part.get('mimeType', 'application/octet-stream'),
+                        size=part['body'].get('size', 0)
+                    )
+                    db_email.attachments.append(new_attachment)
+                    print(f"   -> Found attachment: {part['filename']}")
+
         self.db.add(db_email)
         self.db.commit()
 
-        # Store vector in ChromaDB
+        # 7. Store vector in ChromaDB
         self.collection.add(
             embeddings=[embedding],
-            metadatas=[{"sender": sender, "subject": subject}], # Metadata for filtering later
+            metadatas=[{"sender": sender, "subject": subject}],
             ids=[email_data['id']]
         )
 
         print(f"✅ Indexed email from {sender} | Subject: {subject}")
         if entities:
-            print(f"   -> Found entities: {entities[:3]}") # Print first 3 found entities
+            print(f"   -> Found entities: {entities[:3]}")
 
 # Create a single instance
 indexing_service = IndexingService()

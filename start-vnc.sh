@@ -15,8 +15,9 @@ sleep 2
 # It will be accessible on port 5900.
 # The -forever flag keeps it running after the first connection.
 # The -nopw flag means no password is required (safe for a trusted Codespace env).
+# The -listen 0.0.0.0 flag allows external connections.
 echo "Starting VNC server on port 5900..."
-x11vnc -display :99 -forever -nopw -quiet & 
+x11vnc -display :99 -listen 0.0.0.0 -forever -nopw -quiet & 
 X11VNC_PID=$!
 
 # Run the Electron application.

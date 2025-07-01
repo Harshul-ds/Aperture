@@ -20,9 +20,22 @@ x11vnc -display :99 -forever -nopw -quiet &
 X11VNC_PID=$!
 
 # Run the Electron application.
-# We use the full path to the executable and keep the --no-sandbox flag.
+# We use the full path to the executable and add flags for compatibility.
 echo "Starting Aperture application..."
-./node_modules/.bin/electron . --no-sandbox
+
+# Base command arguments for Electron
+ELECTRON_ARGS=("."
+"--no-sandbox")
+
+# In GitHub Codespaces, a GPU is not available.
+# We check for the CODESPACES environment variable and disable the GPU if it's present.
+if [ "$CODESPACES" = "true" ]; then
+  echo "Codespace environment detected. Disabling GPU acceleration."
+  ELECTRON_ARGS+=("--disable-gpu")
+fi
+
+# Execute Electron with the constructed arguments
+./node_modules/.bin/electron "${ELECTRON_ARGS[@]}"
 
 # When the Electron app is closed, this script will continue.
 # We'll now clean up the background processes.

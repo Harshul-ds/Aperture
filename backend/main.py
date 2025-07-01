@@ -41,4 +41,4 @@ def read_root():
 
 # This block is for running the server directly during development
 if __name__ == "__main__":
-    uvicorn.run("main:app", host=settings.API_HOST, port=settings.API_PORT)
+    uvicorn.run("backend.main:app", host=settings.API_HOST, port=settings.API_PORT)

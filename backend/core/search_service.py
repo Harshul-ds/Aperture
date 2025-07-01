@@ -18,7 +18,7 @@ class SearchService:
         # Connect to the same ChromaDB instance and collection
         self.chroma_client = chromadb.Client()
         # Assumes the collection has already been created by the indexing service
-        self.collection = self.chroma_client.get_collection(name="emails")
+        self.collection = self.chroma_client.get_or_create_collection(name="emails")
 
         # Get a database session for retrieving metadata from SQLite
         self.db = SessionLocal()

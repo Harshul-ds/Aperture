@@ -53,3 +53,35 @@ class AuthService:
         return creds
 
 auth_service = AuthService()
+
+# They are the public interface to more complex AuthService class.
+
+import googleapiclient.discovery
+from typing import Optional
+
+def get_user_credentials() -> Optional[Credentials]:
+    """
+    Safely loads user credentials from the token file if it exists.
+    This version does NOT trigger a new authentication flow. It's for checking status.
+    """
+    if os.path.exists(TOKEN_PATH):
+        try:
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+            # Check if the token is still valid (or refreshable)
+            if creds and creds.valid:
+                return creds
+            elif creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                # Save the refreshed token
+                with open(TOKEN_PATH, 'w') as token_file:
+                    token_file.write(creds.to_json())
+                return creds
+        except Exception as e:
+            # Handle cases where the token file is corrupted
+            print(f"Error loading token file: {e}. Please re-authenticate.")
+            return None
+    return None
+
+def build_google_service(creds: Credentials) -> googleapiclient.discovery.Resource:
+    """Builds the Gmail API service object from a credentials object."""
+    return googleapiclient.discovery.build('gmail', 'v1', credentials=creds)

@@ -4,7 +4,7 @@
   "description": "Local application which serves as a smart abstraction over gmail",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "./start-vnc.sh",
     "dist": "electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

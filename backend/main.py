@@ -1,44 +1,81 @@
-# backend/main.py (The Correct, Final Version for this Step)
+# backend/main.py
 
 import uvicorn
+import asyncio
+from pydantic import PydanticDeprecatedSince20
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from anyio import to_thread
+from backend.api.logger import manager as log_manager
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+import logging
+logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.FATAL)
+
 from backend.db.database import create_db_and_tables
-
-# --- KEY CHANGE: Import routers ---
-from backend.api import search, auth, ingest, jobs
+from backend.api import search, auth, ingest, jobs, logger
 from backend.core.config import settings
+from backend.core.ingestion_service import ingestion_service
+from backend.core.auth_service import get_user_credentials, build_google_service
 
+# This runs once when the application starts
 create_db_and_tables()
-# Create the main FastAPI application instance
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This block runs on application startup
+    print("--- Aperture Backend starting up ---")
+    
+    log_manager.set_main_loop()
+
+    async def startup_ingestion_task():
+        # Wait a few seconds for the server to be fully ready
+        await asyncio.sleep(5)
+        print("--- Checking for new emails in the background ---")
+        
+        creds = get_user_credentials() # This function must exist in your auth_service
+        if creds:
+            try:
+                service = build_google_service(creds) # This function must exist in your auth_service
+                await to_thread.run_sync(ingestion_service.fetch_and_process_emails, 50)
+                print("--- Background email check complete ---")
+            except Exception as e:
+                print(f"--- Background ingestion failed: {e} ---")
+        else:
+            print("--- No valid credentials found, skipping startup ingestion. Please authenticate. ---")
+
+    # Create the background task so it doesn't block the server from starting
+    asyncio.create_task(startup_ingestion_task())
+    
+    yield
+    # This block runs on application shutdown
+    print("--- Aperture Backend shutting down ---")
+
+# --- FastAPI App Initialization ---
 app = FastAPI(
     title=settings.APP_NAME,
     version="0.1.0",
+    lifespan=lifespan # Use our new startup/shutdown manager
 )
 
-# CORS Middleware allows our frontend to talk to this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Allow all for development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- KEY CHANGE: Include BOTH routers ---
-# This makes the /auth/google endpoint available to the application
+# Include all the API routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(ingest.router, prefix="/ingest", tags=["Ingestion"])
 app.include_router(search.router, prefix="/search", tags=["Search"])
 app.include_router(jobs.router, prefix="/jobs", tags=["Jobs"])
-
+app.include_router(logger.router, prefix="/log", tags=["Logging"])
 
 @app.get("/", tags=["Health Check"])
 def read_root():
-    """A simple health check endpoint to confirm the API is running."""
-    return {"status": "ok", "message": f"Welcome to {settings.APP_NAME}"}
-
-
-# This block is for running the server directly during development
-if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host=settings.API_HOST, port=settings.API_PORT)
+    """A simple health check endpoint."""
+    return {"status": "ok", "message": f"Welcome to {settings.APP_NAME} v{app.version}"}

@@ -8,21 +8,38 @@ let pyProcess = null;
 
 // --- Function to Start the FastAPI Backend ---
 function startPythonBackend() {
-    // Run the backend as a module to ensure correct pathing
-    pyProcess = spawn('python3', ['-m', 'backend.main'], {
-        cwd: __dirname, // Set the working directory to the project root
+    console.log("Attempting to start Uvicorn server...");
+
+    // Find the python executable in the virtual environment for robustness
+    const pythonExecutable = path.join(__dirname, '.venv', 'bin', 'python3');
+    
+    // Command to run: uvicorn. The arguments tell it which app to run and how.
+    // This is the command-line equivalent of 'uvicorn backend.main:app --host 127.0.0.1 --port 8000'
+    pyProcess = spawn(pythonExecutable, [
+        '-m', 'uvicorn', 
+        'backend.main:app', 
+        '--host', '127.0.0.1', 
+        '--port', '8000'
+    ], {
+        cwd: __dirname,
+        env: { ...process.env, "PYTHONWARNINGS": "ignore" }
     });
 
     pyProcess.stdout.on('data', (data) => {
-        console.log(`Python stdout: ${data}`);
+        // We use .trim() to clean up extra newlines from the buffer
+        console.log(`Python stdout: ${data.toString().trim()}`);
     });
 
     pyProcess.stderr.on('data', (data) => {
-        console.error(`Python stderr: ${data}`);
+        console.error(`Python stderr: ${data.toString().trim()}`);
     });
 
     pyProcess.on('close', (code) => {
         console.log(`Python process exited with code ${code}`);
+    });
+
+    pyProcess.on('error', (err) => {
+        console.error('Failed to start Python subprocess.', err);
     });
 }
 

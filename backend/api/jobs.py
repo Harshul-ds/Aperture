@@ -1,44 +1,56 @@
-# backend/api/jobs.py
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from typing import List
+# backend/api/jobs.py (Corrected Version)
+
+import logging
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 from backend.db.database import SessionLocal
 from backend.db import models
-from backend.models.job import JobApplicationResponse, JobApplicationItem
 
 router = APIRouter()
 
-# Dependency to get the database session
-def get_db():
+# --- Pydantic Models for the API Response ---
+class JobResultItem(BaseModel):
+    id: str
+    company: Optional[str] = "Unknown Company"
+    subject: str
+    # --- THE DEFINITIVE FIX ---
+    # The field name here MUST match the data source (models.Email.job_status)
+    job_status: str = Field(alias="status") 
+
+    class Config:
+        # This allows us to still output 'status' in the JSON
+        # while using 'job_status' in our Python code.
+        allow_population_by_field_name = True 
+        
+class JobsResponse(BaseModel):
+    status: str = "success"
+    results: List[JobResultItem]
+
+@router.get("/", response_model=JobsResponse, summary="Get all job-related emails")
+def get_job_applications():
+    logging.info("Fetching job application data from SQL database...")
     db = SessionLocal()
     try:
-        yield db
+        job_categories = ['Applied', 'Interview', 'Offer', 'Rejected', 'Job Application']
+        
+        job_emails = db.query(models.Email).filter(
+            models.Email.job_status.in_(job_categories)
+        ).all()
+
+        # This mapping will now work correctly because the field names match.
+        results = [
+            JobResultItem(
+                id=email.id,
+                company=email.job_company,
+                subject=email.subject,
+                job_status=email.job_status # Now maps to the correct field
+            ) for email in job_emails
+        ]
+        return JobsResponse(results=results)
+    except Exception as e:
+        logging.error(f"Error fetching job data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while fetching job data.")
     finally:
         db.close()
-
-@router.get(
-    "/", 
-    response_model=JobApplicationResponse, 
-    summary="Get all job application emails"
-)
-def get_job_applications(db: Session = Depends(get_db)):
-    """
-    Retrieves all emails that have been classified as 'Job Application',
-    along with their extracted company and status.
-    """
-    db_jobs = db.query(models.Email).filter(models.Email.category == "Job Application").all()
-    
-    # Map the SQLAlchemy models to the Pydantic models
-    job_items = [
-        JobApplicationItem(
-            id=job.id,
-            sender=job.sender,
-            subject=job.subject,
-            company=job.job_company,
-            status=job.job_status
-        )
-        for job in db_jobs
-    ]
-
-    return JobApplicationResponse(status="success", results=job_items)

@@ -164,3 +164,26 @@ nav button.active {
     font-size: 14px;
     color: #586069;
 }
+
+#log-viewer-container {
+    margin-top: 20px;
+    border-top: 1px solid #e1e4e8;
+    padding-top: 15px;
+}
+
+#log-viewer-container h3 {
+    margin-top: 0;
+}
+
+#log-output {
+    background-color: #24292e;
+    color: #d1d5da;
+    font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+    font-size: 12px;
+    padding: 15px;
+    border-radius: 6px;
+    height: 200px;
+    overflow-y: scroll;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

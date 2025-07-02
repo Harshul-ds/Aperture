@@ -1,3 +1,5 @@
+// frontend/js/renderer.js (Final Proactive Version)
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const searchInput = document.getElementById('search-input');
@@ -6,11 +8,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const navJobs = document.getElementById('nav-jobs');
     const searchPageContainer = document.getElementById('search-page-container');
     const jobTrackerContainer = document.getElementById('job-tracker-container');
+    const logOutput = document.getElementById('log-output');
+    const ingestButton = document.getElementById('ingest-button');
 
     // --- State ---
     let searchTimeout;
 
-    // --- Page Navigation ---
+    // --- Live Log Functionality ---
+    const connectToLogStream = () => {
+        logOutput.textContent = 'Attempting to connect to backend log stream...\n';
+        const socket = new WebSocket('ws://127.0.0.1:8000/log/ws');
+
+        socket.onopen = () => {
+            logOutput.textContent = '✅ Backend log stream connected.\n\n';
+            // --- KEY FIX: Once connected, proactively fetch data ---
+            fetchAndRenderJobs();
+        };
+
+        socket.onmessage = (event) => {
+            logOutput.textContent += event.data + '\n';
+            logOutput.scrollTop = logOutput.scrollHeight;
+        };
+
+        socket.onclose = (event) => {
+            logOutput.textContent += '\n--- Log stream disconnected. Retrying in 3 seconds... ---\n';
+            setTimeout(connectToLogStream, 3000);
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+        };
+    };
+
+    // --- Page Navigation & Data Fetching ---
     function switchToSearchView() {
         searchPageContainer.classList.remove('hidden');
         jobTrackerContainer.classList.add('hidden');
@@ -26,75 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchAndRenderJobs();
     }
 
-    // --- Search Functionality ---
-    function handleSearch() {
-        clearTimeout(searchTimeout);
-        const query = searchInput.value;
-
-        if (query.length > 2) {
-            searchTimeout = setTimeout(() => {
-                fetch(`http://127.0.0.1:8000/search/?query=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
-                    .then(data => renderSearchResults(data))
-                    .catch(error => {
-                        console.error('Error fetching search results:', error);
-                        resultsContainer.innerHTML = '<p>Error loading results.</p>';
-                    });
-            }, 300);
-        } else {
-            resultsContainer.innerHTML = '';
-        }
-    }
-
-    function renderSearchResults(data) {
-        resultsContainer.innerHTML = '';
-        if (data.results && data.results.length > 0) {
-            data.results.forEach(item => {
-                const resultItem = document.createElement('div');
-                resultItem.className = 'result-item';
-
-                const header = document.createElement('div');
-                header.className = 'result-header';
-
-                const sender = document.createElement('div');
-                sender.className = 'result-sender';
-                sender.textContent = item.sender;
-
-                const categoryTag = document.createElement('span');
-                categoryTag.className = `category-tag category-${item.category.toLowerCase().replace(/\s+/g, '-')}`;
-                categoryTag.textContent = item.category;
-
-                const relevance = document.createElement('div');
-                relevance.className = 'result-relevance';
-                relevance.textContent = `Relevance: ${item.relevance_score}`;
-
-                header.appendChild(sender);
-                header.appendChild(categoryTag);
-                header.appendChild(relevance);
-
-                const subject = document.createElement('div');
-                subject.className = 'result-subject';
-                subject.textContent = item.has_attachment ? `${item.subject} 📎` : item.subject;
-
-                const preview = document.createElement('div');
-                preview.className = 'result-preview';
-                preview.textContent = item.preview;
-
-                resultItem.appendChild(header);
-                resultItem.appendChild(subject);
-                resultItem.appendChild(preview);
-                resultsContainer.appendChild(resultItem);
-            });
-        } else {
-            resultsContainer.innerHTML = '<p>No results found.</p>';
-        }
-    }
-
-    // --- Job Tracker Functionality ---
     async function fetchAndRenderJobs() {
         try {
             jobTrackerContainer.innerHTML = '<p>Loading job applications...</p>';
             const response = await fetch('http://127.0.0.1:8000/jobs/');
+            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
             const data = await response.json();
             if (data.status === 'success') {
                 renderJobBoard(data.results);
@@ -103,50 +69,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error fetching job applications:', error);
-            jobTrackerContainer.innerHTML = '<p>Error loading job applications.</p>';
+            jobTrackerContainer.innerHTML = `<p style="color:red;">Error loading job applications: ${error.message}</p>`;
         }
     }
 
-    function renderJobBoard(jobs) {
-        jobTrackerContainer.innerHTML = '';
+    const handleIngestClick = async () => {
+        ingestButton.textContent = 'Syncing...';
+        ingestButton.disabled = true;
+        logOutput.textContent += 'INFO: Manual ingestion triggered from UI.\n';
+        try {
+            await fetch('http://127.0.0.1:8000/ingest/gmail', { method: 'POST' });
+        } catch (error) {
+            console.error('Failed to trigger ingestion:', error);
+            logOutput.textContent += 'ERROR: Failed to trigger ingestion.\n';
+        }
+        // After ingestion is triggered, wait a bit then refresh the UI
+        setTimeout(() => {
+            ingestButton.textContent = 'Sync New Emails';
+            ingestButton.disabled = false;
+            fetchAndRenderJobs(); // Refresh the job board
+        }, 5000); // 5 second delay to allow backend to process
+    };
 
-        const statuses = ['Applied', 'Interview', 'Offer', 'Rejected'];
-        const jobsByStatus = statuses.reduce((acc, status) => {
-            acc[status] = jobs.filter(job => job.status === status);
-            return acc;
-        }, {});
+    // ... your other functions (handleSearch, renderSearchResults, renderJobBoard) ...
 
-        statuses.forEach(status => {
-            const column = document.createElement('div');
-            column.className = 'job-status-column';
-
-            const title = document.createElement('h2');
-            title.textContent = `${status} (${jobsByStatus[status].length})`;
-            column.appendChild(title);
-
-            jobsByStatus[status].forEach(job => {
-                const card = document.createElement('div');
-                card.className = 'job-card';
-
-                const company = document.createElement('div');
-                company.className = 'job-card-company';
-                company.textContent = job.company || 'Unknown Company';
-
-                const subject = document.createElement('div');
-                subject.className = 'job-card-subject';
-                subject.textContent = job.subject;
-
-                card.appendChild(company);
-                card.appendChild(subject);
-                column.appendChild(card);
-            });
-
-            jobTrackerContainer.appendChild(column);
-        });
-    }
-
-    // --- Event Listeners ---
+    // --- Event Listeners & Initial Calls ---
     searchInput.addEventListener('input', handleSearch);
     navSearch.addEventListener('click', switchToSearchView);
     navJobs.addEventListener('click', switchToJobsView);
+    ingestButton.addEventListener('click', handleIngestClick);
+
+    connectToLogStream();
 });

@@ -1,45 +1,40 @@
 #!/bin/bash
 
-# Set a display number
-export DISPLAY=:99
+# This script is now the single source of truth for resetting the environment.
 
-# Start the virtual framebuffer (Xvfb) in the background
-echo "Starting virtual screen..."
-Xvfb :99 -screen 0 1280x1024x24 & 
-XVFB_PID=$!
+CHROMA_DB_PATH="./chroma_db"
+SQL_DB_PATH="./aperture_local.db"
 
-# Give Xvfb a moment to start
-sleep 2
-
-# Start the VNC server to stream the virtual display.
-# It will be accessible on port 5900.
-# The -forever flag keeps it running after the first connection.
-# The -nopw flag means no password is required (safe for a trusted Codespace env).
-# The -listen 0.0.0.0 flag allows external connections.
-echo "Starting VNC server on port 5900..."
-x11vnc -display :99 -listen 0.0.0.0 -forever -nopw -quiet & 
-X11VNC_PID=$!
-
-# Run the Electron application.
-# We use the full path to the executable and add flags for compatibility.
-echo "Starting Aperture application..."
-
-# Base command arguments for Electron
-ELECTRON_ARGS=("."
-"--no-sandbox")
-
-# In GitHub Codespaces, a GPU is not available.
-# We check for the CODESPACES environment variable and disable the GPU if it's present.
-if [ "$CODESPACES" = "true" ]; then
-  echo "Codespace environment detected. Disabling GPU acceleration."
-  ELECTRON_ARGS+=("--disable-gpu")
+# Check if the special '--reset' flag was passed as the first argument.
+if [ "$1" == "--reset" ]; then
+  echo "--- Reset flag detected. Wiping all databases BEFORE starting the application. ---"
+  
+  # Use the file system's "sledgehammer" to remove the databases.
+  # This happens before any Python code is imported, guaranteeing a clean state.
+  echo "Deleting old databases..."
+  rm -rf "$CHROMA_DB_PATH"
+  rm -f "$SQL_DB_PATH"
+  echo "Databases wiped."
 fi
 
-# Execute Electron with the constructed arguments
-./node_modules/.bin/electron "${ELECTRON_ARGS[@]}"
+# The rest of the script is for starting the application as normal.
+# Clean up any leftover processes from a bad shutdown
+killall x11vnc Xvfb || true
+sleep 1
 
-# When the Electron app is closed, this script will continue.
-# We'll now clean up the background processes.
-echo "Application closed. Shutting down virtual screen and VNC server."
-kill $XVFB_PID
-kill $X11VNC_PID
+# Start virtual screen
+echo "Starting virtual screen on :99..."
+Xvfb :99 -screen 0 1280x800x24 &
+sleep 2
+
+# Start VNC server
+echo "Starting VNC server on port 5900. Password is 'aperture'"
+x11vnc -display :99 -forever -passwd aperture -quiet &
+sleep 1
+
+# Start the Electron application
+echo "Starting Aperture application..."
+DISPLAY=:99 ./node_modules/.bin/electron . --no-sandbox --disable-gpu
+
+echo "Application closed. Shutting down."
+killall x11vnc Xvfb

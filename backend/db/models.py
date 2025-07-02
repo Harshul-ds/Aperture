@@ -1,25 +1,29 @@
 # backend/db/models.py
-from sqlalchemy import Column, String, Text, Integer, ForeignKey
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer
+from sqlalchemy.orm import relationship, declarative_base
+from datetime import datetime
 
 Base = declarative_base()
 
 class Email(Base):
     __tablename__ = "emails"
 
-    id = Column(String, primary_key=True, index=True) # This is the Gmail message ID
-    thread_id = Column(String, index=True)
+    id = Column(String, primary_key=True, index=True)
+    thread_id = Column(String)
     sender = Column(String)
     subject = Column(String)
-    snippet = Column(Text)
-    category = Column(String, default="General", index=True)
+    snippet = Column(String)
+    category = Column(String, default="General")
+    job_company = Column(String, nullable=True)
+    job_status = Column(String, default="Applied") # e.g., Applied, Interview, Offer, Rejected
 
-    # Fields for the job tracking feature
-    job_company = Column(String, nullable=True, index=True)
-    job_status = Column(String, nullable=True, index=True)
+    # --- NEW AND CRUCIAL COLUMN ---
+    # This will store the UTC timestamp of when the email was received.
+    # It's indexed for fast lookups to find the latest email.
+    received_at = Column(DateTime, default=datetime.utcnow, index=True)
 
-    # This creates the one-to-many relationship
+    # Relationship to attachments
     attachments = relationship("Attachment", back_populates="email")
 
 class Attachment(Base):
@@ -29,9 +33,7 @@ class Attachment(Base):
     filename = Column(String)
     mime_type = Column(String)
     size = Column(Integer)
-
-    # Foreign key to link back to the Email table
     email_id = Column(String, ForeignKey("emails.id"))
 
-    # This creates the many-to-one relationship
+    # Relationship to email
     email = relationship("Email", back_populates="attachments")

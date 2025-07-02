@@ -1,7 +1,10 @@
 # backend/core/auth_service.py (The Definitive Version)
 
+# backend/core/auth_service.py (The Definitive Version)
+
 import os
 import json
+import keyring
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -10,14 +13,16 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLIENT_SECRET_PATH = os.path.join(BASE_DIR, 'client_secret.json')
-TOKEN_PATH = os.path.join(BASE_DIR, 'token.json')
+
+# --- KEYRING CONFIGURATION ---
+KEYRING_SERVICE_NAME = "Aperture"
+KEYRING_USERNAME = "google_oauth_token"
 
 
 class AuthService:
     def get_credentials(self) -> Credentials:
-        creds = None
-        if os.path.exists(TOKEN_PATH):
-            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        creds_json = keyring.get_password(KEYRING_SERVICE_NAME, KEYRING_USERNAME)
+        creds = Credentials.from_authorized_user_info(json.loads(creds_json), SCOPES) if creds_json else None
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
@@ -46,9 +51,8 @@ class AuthService:
                 flow.fetch_token(code=auth_code)
                 creds = flow.credentials
 
-            with open(TOKEN_PATH, 'w') as token_file:
-                token_file.write(creds.to_json())
-                print(f"Credentials saved to {TOKEN_PATH}")
+            keyring.set_password(KEYRING_SERVICE_NAME, KEYRING_USERNAME, creds.to_json())
+            print(f"Credentials saved to system keyring under service '{KEYRING_SERVICE_NAME}'.")
         
         return creds
 
@@ -61,27 +65,35 @@ from typing import Optional
 
 def get_user_credentials() -> Optional[Credentials]:
     """
-    Safely loads user credentials from the token file if it exists.
+    Safely loads user credentials from the system keyring if they exist.
     This version does NOT trigger a new authentication flow. It's for checking status.
     """
-    if os.path.exists(TOKEN_PATH):
-        try:
-            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
-            # Check if the token is still valid (or refreshable)
-            if creds and creds.valid:
-                return creds
-            elif creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-                # Save the refreshed token
-                with open(TOKEN_PATH, 'w') as token_file:
-                    token_file.write(creds.to_json())
-                return creds
-        except Exception as e:
-            # Handle cases where the token file is corrupted
-            print(f"Error loading token file: {e}. Please re-authenticate.")
-            return None
+    creds_json = keyring.get_password(KEYRING_SERVICE_NAME, KEYRING_USERNAME)
+    if not creds_json:
+        return None
+
+    try:
+        creds = Credentials.from_authorized_user_info(json.loads(creds_json), SCOPES)
+        if creds and creds.valid:
+            return creds
+        elif creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            keyring.set_password(KEYRING_SERVICE_NAME, KEYRING_USERNAME, creds.to_json())
+            return creds
+    except Exception as e:
+        print(f"Error loading token from keyring: {e}. Please re-authenticate.")
+        return None
+
     return None
 
 def build_google_service(creds: Credentials) -> googleapiclient.discovery.Resource:
     """Builds the Gmail API service object from a credentials object."""
     return googleapiclient.discovery.build('gmail', 'v1', credentials=creds)
+
+def clear_user_credentials() -> None:
+    """Removes the user's credentials from the system keyring."""
+    try:
+        keyring.delete_password(KEYRING_SERVICE_NAME, KEYRING_USERNAME)
+        print("User credentials cleared from keyring.")
+    except keyring.errors.PasswordDeleteError:
+        print("No credentials found in keyring to clear.")

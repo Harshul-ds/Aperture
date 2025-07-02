@@ -17,7 +17,7 @@ logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.FATAL)
 from backend.core.logging_setup import configure_logging
 configure_logging()
 
-from backend.db.database import create_db_and_tables
+from backend.db.migrate import run_migrations
 from backend.api import search, auth, ingest, jobs, logger
 from backend.core.config import settings
 from backend.core.ingestion_service import ingestion_service
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     log_manager.set_main_loop()
 
     # Ensure database schema exists before handling requests
-    create_db_and_tables()
+    run_migrations()
 
     async def startup_ingestion_task():
         # Wait a few seconds for the server to be fully ready
@@ -75,11 +75,11 @@ app.add_middleware(
 )
 
 # Include all the API routers
-app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-app.include_router(ingest.router, prefix="/ingest", tags=["Ingestion"])
-app.include_router(search.router, prefix="/search", tags=["Search"])
-app.include_router(jobs.router, prefix="/jobs", tags=["Jobs"])
-app.include_router(logger.router, prefix="/log", tags=["Logging"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(ingest.router, prefix="/api/v1/ingest", tags=["Ingestion"])
+app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
+app.include_router(jobs.router, prefix="/api/v1/jobs", tags=["Jobs"])
+app.include_router(logger.router, prefix="/api/v1/log", tags=["Logging"])
 
 @app.get("/", tags=["Health Check"])
 def read_root():

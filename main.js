@@ -2,16 +2,37 @@
 
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 
 let pyProcess = null;
+
+// Resolve a python interpreter in a cross-platform way
+function resolvePythonExecutable() {
+    // 1. Explicit override
+    if (process.env.PYTHON_PATH && fs.existsSync(process.env.PYTHON_PATH)) {
+        return process.env.PYTHON_PATH;
+    }
+
+    // 2. Virtual-env detection
+    if (process.env.VIRTUAL_ENV) {
+        const candidate = process.platform === 'win32'
+            ? path.join(process.env.VIRTUAL_ENV, 'Scripts', 'python.exe')
+            : path.join(process.env.VIRTUAL_ENV, 'bin', 'python3');
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    // 3. Fallback to system python (relies on PATH)
+    return process.platform === 'win32' ? 'python' : 'python3';
+}
 
 // --- Function to Start the FastAPI Backend ---
 function startPythonBackend() {
     console.log("Attempting to start Uvicorn server...");
 
-    // Find the python executable in the virtual environment for robustness
-    const pythonExecutable = path.join(__dirname, '.venv', 'bin', 'python3');
+        const pythonExecutable = resolvePythonExecutable();
     
     // Command to run: uvicorn. The arguments tell it which app to run and how.
     // This is the command-line equivalent of 'uvicorn backend.main:app --host 127.0.0.1 --port 8000'

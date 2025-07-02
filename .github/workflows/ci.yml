@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff mypy pytest fastapi uvicorn python-dotenv pydantic-settings \
             google-api-python-client google-auth-httplib2 google-auth-oauthlib \
-            sqlalchemy chromadb 'spacy>=3.8.0,<3.9.0' sentence-transformers
+            sqlalchemy chromadb 'spacy>=3.8.0,<3.9.0' sentence-transformers alembic keyring pytest-mock
 
       - name: Ruff
         run: ruff .

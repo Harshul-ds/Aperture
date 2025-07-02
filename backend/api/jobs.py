@@ -2,7 +2,7 @@
 
 import logging
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 from backend.db.database import SessionLocal
@@ -19,10 +19,11 @@ class JobResultItem(BaseModel):
     # The field name here MUST match the data source (models.Email.job_status)
     job_status: str = Field(alias="status") 
 
-    class Config:
+    model_config = ConfigDict(
         # This allows us to still output 'status' in the JSON
         # while using 'job_status' in our Python code.
-        allow_population_by_field_name = True 
+        populate_by_name=True
+    ) 
         
 class JobsResponse(BaseModel):
     status: str = "success"

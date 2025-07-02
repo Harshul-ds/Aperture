@@ -2,7 +2,7 @@
 
 import logging
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 
 # --- KEY CHANGE: Import the correct, unified service ---
@@ -17,7 +17,7 @@ class SearchResultItem(BaseModel):
     preview: str = Field(..., alias="snippet")
     relevance_score: float = Field(..., alias="distance")
     category: str; has_attachment: bool = Field(default=False)
-    class Config: allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 class SearchResponse(BaseModel):
     status: str = "success"; results: List[SearchResultItem]

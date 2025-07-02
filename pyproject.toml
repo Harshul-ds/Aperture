@@ -25,7 +25,9 @@ dependencies = [
     "chromadb",        # The vector database for semantic search
     "spacy>=3.8.0,<3.9.0",
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",           # For NLP tasks like Named Entity Recognition
-    "sentence-transformers" # For creating vector embeddings
+    "sentence-transformers", # For creating vector embeddings
+    "alembic",  # For database migrations
+    "keyring" # For secure credential storage
 
 ]
 
@@ -38,16 +40,20 @@ dependencies = [
 dev = [
     "ruff",         # The all-in-one linter and formatter
     "pytest",       # The gold standard for testing in Python
-    "pytest-watch"  # Automatically re-runs tests when you save a file
+    "pytest-watch",  # Automatically re-runs tests when you save a file
+    "pytest-mock"   # For mocking objects during tests
 ]
 
 # --- Tool-Specific Configuration ---
 # This section helps configure the tools we use.
-[tool.ruff]
-# Standard configuration for the ruff linter
-line-length = 88
-select = ["E", "F", "W", "I"] # Select common error/warning codes
+[tool.ruff.lint]
+# Enable Pyflakes `F` and a subset of the pycodestyle `E`  codes by default.
+select = ["E4", "E7", "E9", "F"]
 ignore = []
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "--import-mode=importlib"
 
 [tool.ruff.format]
 quote-style = "double"

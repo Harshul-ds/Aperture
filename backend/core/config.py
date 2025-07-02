@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "Aperture Backend"
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
+    SQLITE_PATH: str = "aperture_local.db"
+    CHROMA_DB_PATH: str = "chroma_db"
 
     class Config:
         # This tells pydantic-settings to look for a .env file

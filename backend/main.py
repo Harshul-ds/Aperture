@@ -14,6 +14,9 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import logging
 logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.FATAL)
 
+from backend.core.logging_setup import configure_logging
+configure_logging()
+
 from backend.db.database import create_db_and_tables
 from backend.api import search, auth, ingest, jobs, logger
 from backend.core.config import settings
@@ -21,7 +24,7 @@ from backend.core.ingestion_service import ingestion_service
 from backend.core.auth_service import get_user_credentials, build_google_service
 
 # This runs once when the application starts
-create_db_and_tables()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,6 +32,9 @@ async def lifespan(app: FastAPI):
     print("--- Aperture Backend starting up ---")
     
     log_manager.set_main_loop()
+
+    # Ensure database schema exists before handling requests
+    create_db_and_tables()
 
     async def startup_ingestion_task():
         # Wait a few seconds for the server to be fully ready
